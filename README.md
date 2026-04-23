@@ -87,6 +87,7 @@ Use Application Commands
 
 
 
+
 Запуск бота:
 Установите зависимости: pip install discord.py python-dotenv
 
