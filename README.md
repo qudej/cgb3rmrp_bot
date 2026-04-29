@@ -96,7 +96,7 @@ DISCORD_BOT_TOKEN=Ваш_Секретный_Токен
 
 Запустите скрипт: python main.py
 
-
+Бот написан на: python 3.14.4
 
 Discord: qude_
 
