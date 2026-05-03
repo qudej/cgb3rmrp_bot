@@ -83,9 +83,13 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
             pass
 
     current_date = datetime.now(msk_tz)
-    chs_until_str, duration_str = "Нет", "0 дней"
+    
+    # Флаг: есть ли ЧС?
+    is_blacklist = bool(bl_reason)
+    chs_until_str, duration_str = "", ""
 
-    if bl_reason and bl_duration:
+    if is_blacklist:
+        if not bl_duration: bl_duration = "14" # По умолчанию 14 дней
         try:
             days = int(bl_duration)
             chs_until = current_date + timedelta(days=days)
@@ -97,21 +101,26 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
 
     log_channel = guild.get_channel(LOG_CHANNEL_ID)
     if log_channel:
+        desc = (
+            f"👤 **Уволен:** {mention_str}\n" # Убрано дублирование Имени и Статика
+            f"🧾 **Оформил:** {admin_user.mention}\n"
+            f"📑 **Уволен согласно:** {report_link}\n\n"
+            f"📝 **Причина:** {dismiss_reason}\n"
+            f"📅 **Дата:** {current_date.strftime('%d.%m.%Y %H:%M')}"
+        )
+        
+        # Добавляем строку про ЧС только если ЧС действительно выдан!
+        if is_blacklist:
+            desc += f"\n⛔ **ЧС до:** {chs_until_str}"
+
         embed_audit = discord.Embed(
             title="📕 Кадровый аудит: Увольнение",
-            description=(
-                f"👤 **Уволен:** {mention_str}\n"
-                f"🧾 **Оформил:** {admin_user.mention}\n"
-                f"📑 **Уволен согласно:** {report_link}\n\n"
-                f"📝 **Причина:** {dismiss_reason}\n"
-                f"📅 **Дата:** {current_date.strftime('%d.%m.%Y %H:%M')}\n"
-                f"⛔ **ЧС до:** {chs_until_str}"
-            ),
+            description=desc,
             color=discord.Color.dark_red()
         )
         await log_channel.send(embed=embed_audit)
 
-    if bl_reason:
+    if is_blacklist:
         bl_channel = guild.get_channel(BLACKLIST_CHANNEL_ID)
         if bl_channel:
             embed_bl = discord.Embed(
@@ -125,4 +134,6 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
                 ),
                 color=discord.Color.default()
             )
-            await bl_channel.send(embed=embed_bl)
+            # Пингуем администраторов
+            mentions_str = " ".join([f"<@&{r_id}>" for r_id in BLACKLIST_PING_ROLES])
+            await bl_channel.send(content=mentions_str, embed=embed_bl)
