@@ -29,6 +29,30 @@ class AdminBlacklistModal(discord.ui.Modal, title="Оформление ЧС"):
         await self.original_msg.edit(embed=embed, view=self.original_view)
         await interaction.followup.send("Сотрудник уволен с занесением в ЧС.", ephemeral=True)
 
+class RejectResignationModal(discord.ui.Modal, title="Отказ в увольнении"):
+    reason_field = discord.ui.TextInput(label="Причина отказа", placeholder="Причина...", required=True)
+
+    def __init__(self, original_msg: discord.Message, view: discord.ui.View):
+        super().__init__()
+        self.original_msg = original_msg
+        self.original_view = view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        embed = self.original_msg.embeds[0]
+        embed.title = "❌ Заявление на увольнение отклонено"
+        embed.color = discord.Color.red()
+        embed.add_field(
+            name="📋 Результат", 
+            value=f"**Отклонил:** {interaction.user.mention}\n**Причина:** {self.reason_field.value}", 
+            inline=False
+        )
+        
+        self.original_view.clear_items()
+        await self.original_msg.edit(embed=embed, view=self.original_view)
+        await interaction.followup.send("Заявление на увольнение отклонено.", ephemeral=True)
+
 class AdminDismissalReviewView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -64,6 +88,10 @@ class AdminDismissalReviewView(discord.ui.View):
         fields = {f.name: f.value for f in embed.fields}
         reason = fields.get("Причина", "Не указана")
         await interaction.response.send_modal(AdminBlacklistModal(user_id, interaction.message, reason, self))
+
+    @discord.ui.button(label="Отказать", style=discord.ButtonStyle.blurple, custom_id="dismiss_reject_btn")
+    async def dismiss_reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RejectResignationModal(interaction.message, self))
 
 class AdminReviewView(discord.ui.View):
     def __init__(self):
