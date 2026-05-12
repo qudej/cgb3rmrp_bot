@@ -21,6 +21,7 @@ class DepartmentReviewView(discord.ui.View):
         if "БСМП" in embed.title: dept_name = "БСМП"
         elif "АБ" in embed.title: dept_name = "АБ"
         elif "КУЦ" in embed.title: dept_name = "КУЦ"
+        elif "КДО" in embed.title: dept_name = "КДО"
 
         user_id = int(embed.footer.text.replace("ID пользователя: ", ""))
         member = interaction.guild.get_member(user_id)
@@ -115,3 +116,7 @@ class DepartmentSetupView(discord.ui.View):
     @discord.ui.button(label="КУЦ", style=discord.ButtonStyle.blurple, custom_id="setup_dept_kuc")
     async def kuc_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(DepartmentModal("КУЦ"))
+
+    @discord.ui.button(label="КДО", style=discord.ButtonStyle.blurple, custom_id="setup_dept_kdo")
+    async def kdo_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(DepartmentModal("КДО"))

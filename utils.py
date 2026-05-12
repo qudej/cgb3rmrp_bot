@@ -63,8 +63,14 @@ async def apply_rank_roles(member: discord.Member, new_rank_data: dict) -> bool:
 async def execute_dismissal(guild, interaction, target_user_id, admin_user, dismiss_reason, bl_reason=None, bl_duration=None, report_link="Нет ссылки"):
     member = guild.get_member(target_user_id)
     mention_str, name, static = extract_user_data(member)
-    if not member: mention_str = f"<@{target_user_id}>"
+    
+    # Сохраняем никнейм до того, как мы его изменим, чтобы вывести в ЧС без пинга
+    plain_user_str = member.display_name if member else f"{name} | {static}"
+    
+    if not member: 
+        mention_str = f"<@{target_user_id}>"
 
+    # Снимаем все роли и выдаем роль уволенного
     if member:
         target_role = guild.get_role(ROLE_AFTER_DISMISSAL)
         if target_role:
@@ -76,15 +82,22 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
                 try: await member.remove_roles(r)
                 except discord.Forbidden: pass 
                 
+        # Меняем ник уволенному
         try: 
             new_nick = f"УВ | {name} | {static}"
             await member.edit(nick=new_nick[:32])
         except discord.Forbidden: 
             pass
 
+        if bl_reason: # Если есть причина ЧС, значит увольнение идет с ЧС
+            bl_role = guild.get_role(BLACKLIST_ROLE_ID)
+            if bl_role:
+                try: await member.add_roles(bl_role)
+                except discord.Forbidden: pass
+
     current_date = datetime.now(msk_tz)
     
-    # Флаг: есть ли ЧС?
+    # Флаг: выдан ли ЧС?
     is_blacklist = bool(bl_reason)
     chs_until_str, duration_str = "", ""
 
@@ -99,10 +112,11 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
             chs_until_str = bl_duration
             duration_str = bl_duration
 
+    # 1. Лог кадрового аудита (Увольнение)
     log_channel = guild.get_channel(LOG_CHANNEL_ID)
     if log_channel:
         desc = (
-            f"👤 **Уволен:** {mention_str}\n" # Убрано дублирование Имени и Статика
+            f"👤 **Уволен:** {mention_str}\n"
             f"🧾 **Оформил:** {admin_user.mention}\n"
             f"📑 **Уволен согласно:** {report_link}\n\n"
             f"📝 **Причина:** {dismiss_reason}\n"
@@ -120,20 +134,26 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
         )
         await log_channel.send(embed=embed_audit)
 
+    # 2. Лог ЧС
     if is_blacklist:
         bl_channel = guild.get_channel(BLACKLIST_CHANNEL_ID)
         if bl_channel:
+            bl_desc = (
+                f"**Оформил:**\n{admin_user.mention}\n\n"
+                f"**Внесен в ЧС:**\n{plain_user_str}\n\n"
+                f"**Длительность:**\n{duration_str}\n\n"
+                f"**Причина внесения в ЧС:**\n{bl_reason}"
+            )
+            
+            if report_link and report_link != "Контекстное меню":
+                bl_desc += f"\n\n**Уволен согласно:**\n{report_link}"
+
             embed_bl = discord.Embed(
                 title="⛔ Черный список. Пополнение",
-                description=(
-                    f"**Оформил:**\n{admin_user.mention}\n\n"
-                    f"**Внесен в ЧС:**\n{mention_str}\n\n"
-                    f"**Длительность:**\n{duration_str}\n\n"
-                    f"**Причина внесения в ЧС:**\n{bl_reason}\n\n"
-                    f"**Уволен согласно:**\n{report_link}"
-                ),
-                color=discord.Color.default()
+                description=bl_desc,
+                color=discord.Color.dark_red() 
             )
+            
             # Пингуем администраторов
             mentions_str = " ".join([f"<@&{r_id}>" for r_id in BLACKLIST_PING_ROLES])
             await bl_channel.send(content=mentions_str, embed=embed_bl)
