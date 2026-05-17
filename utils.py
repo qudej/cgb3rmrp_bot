@@ -8,6 +8,12 @@ def is_senior_staff(member: discord.Member) -> bool:
         if role.id in SENIOR_STAFF_ROLES: return True
     return False
 
+def is_senior_dept_staff(member: discord.Member) -> bool:
+    if member.guild_permissions.administrator: return True
+    for role in member.roles:
+        if role.id in SENIOR_DEPT_ROLES: return True
+    return False
+
 def extract_user_data(member: discord.Member):
     name, static = "Неизвестно", "000-000"
     if member:
