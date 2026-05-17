@@ -1,6 +1,6 @@
 import discord
 from config import *
-from utils import is_senior_staff, extract_user_data
+from utils import is_senior_staff, extract_user_data, can_target_member
 
 class DepartmentReviewView(discord.ui.View):
     def __init__(self):
@@ -14,24 +14,42 @@ class DepartmentReviewView(discord.ui.View):
 
     @discord.ui.button(label="Одобрить", style=discord.ButtonStyle.green, custom_id="dept_accept_btn")
     async def accept_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
         embed = interaction.message.embeds[0]
         
+        # Определяем отдел из заголовка
         dept_name = "О"
         if "БСМП" in embed.title: dept_name = "БСМП"
         elif "АБ" in embed.title: dept_name = "АБ"
         elif "КУЦ" in embed.title: dept_name = "КУЦ"
         elif "КДО" in embed.title: dept_name = "КДО"
 
-        user_id = int(embed.footer.text.replace("ID пользователя: ", ""))
+        # Получаем пользователя
+        try:
+            user_id = int(embed.footer.text.replace("ID пользователя: ", ""))
+        except Exception:
+            return await interaction.response.send_message("❌ Не удалось найти ID пользователя.", ephemeral=True)
+            
         member = interaction.guild.get_member(user_id)
 
         if member:
+            if not can_target_member(interaction.user, member):
+                return await interaction.response.send_message(
+                    "❌ Ошибка: Пользователь выше/равен вам по должности, либо вы пытаетесь одобрить заявку самому себе.", 
+                    ephemeral=True
+                )
+
+
+        # Если проверка пройдена, даем боту время на изменение ролей и ника
+        await interaction.response.defer()
+
+        if member:
+            # Меняем префикс в никнейме
             _, name, static = extract_user_data(member)
             new_nick = f"{dept_name} | {name} | {static}"
             try: await member.edit(nick=new_nick[:32])
             except discord.Forbidden: pass
 
+            # Меняем роли отделов
             roles_to_remove =[]
             for d, r_id in DEPARTMENTS_ROLES.items():
                 r = interaction.guild.get_role(r_id)
@@ -45,7 +63,7 @@ class DepartmentReviewView(discord.ui.View):
             role_to_add = interaction.guild.get_role(DEPARTMENTS_ROLES.get(dept_name, 0))
             if role_to_add: roles_to_add.append(role_to_add)
 
-            user_roles_ids =[r.id for r in member.roles]
+            user_roles_ids = [r.id for r in member.roles]
             is_senior = False
             for rank_data in RANK_SYSTEM:
                 if rank_data["main_role"] in user_roles_ids and rank_data.get("is_senior", False):

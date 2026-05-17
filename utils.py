@@ -25,7 +25,11 @@ def extract_user_data(member: discord.Member):
     mention_str = member.mention if member else "Неизвестный"
     return mention_str, name, static
 
-async def apply_rank_roles(member: discord.Member, new_rank_data: dict) -> bool:
+async def apply_rank_roles(admin_user: discord.Member, member: discord.Member, new_rank_data: dict) -> bool:
+    
+    if not can_target_member(admin_user, member):
+        return False
+    
     guild = member.guild
     all_faction_role_ids = set()
     for r in RANK_SYSTEM:
@@ -75,6 +79,13 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
     
     if not member: 
         mention_str = f"<@{target_user_id}>"
+
+    if member and not can_target_member(admin_user, member):
+        await interaction.response.send_message(
+            "❌ Вы не можете уволить этого сотрудника: его роль выше или равна вашей, либо это владелец сервера, либо вы пытаетесь уволить себя.",
+            ephemeral=True
+        )
+        return
 
     # Снимаем все роли и выдаем роль уволенного
     if member:
@@ -163,3 +174,9 @@ async def execute_dismissal(guild, interaction, target_user_id, admin_user, dism
             # Пингуем администраторов
             mentions_str = " ".join([f"<@&{r_id}>" for r_id in BLACKLIST_PING_ROLES])
             await bl_channel.send(content=mentions_str, embed=embed_bl)
+
+def can_target_member( user: discord.Member, target: discord.Member) -> bool:
+    if target.id == target.guild.owner_id: return False
+    if user.id == target.id: return False
+    if target.top_role >= user.top_role: return False
+    return True

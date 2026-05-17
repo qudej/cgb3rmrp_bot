@@ -65,9 +65,9 @@ async def promote_user(interaction: discord.Interaction, member: discord.Member)
 
     old_rank, new_rank = RANK_SYSTEM[current_rank_idx], RANK_SYSTEM[current_rank_idx + 1]
     
-    success = await apply_rank_roles(member, new_rank)
+    success = await apply_rank_roles(interaction.user, member, new_rank)
     if not success:
-        return await interaction.followup.send("❌ Ошибка: У бота нет прав менять роли этому пользователю.")
+        return await interaction.followup.send("❌ Ошибка: Пользователь выше/равен вам по рангу, либо вы пытаетесь изменить ранг себе/владельцу.", ephemeral=True)
 
     await interaction.followup.send(f"✅ Сотрудник повышен: **{new_rank['name']}**")
     
