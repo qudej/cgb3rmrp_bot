@@ -17,9 +17,9 @@ class SetRankSelect(discord.ui.Select):
         new_rank_idx = int(self.values[0])
         new_rank = RANK_SYSTEM[new_rank_idx]
         
-        success = await apply_rank_roles(self.target_member, new_rank)
+        success = await apply_rank_roles(interaction.user, self.target_member, new_rank)
         if not success:
-            return await interaction.followup.send("❌ Нет прав для изменения ролей.")
+            return await interaction.followup.send("❌ Ошибка: Пользователь выше/равен вам по рангу, либо вы пытаетесь изменить ранг себе/владельцу.", ephemeral=True)
 
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
         if log_channel:
