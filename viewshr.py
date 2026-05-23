@@ -120,6 +120,24 @@ class AdminReviewView(discord.ui.View):
         target_static = fields.get("Статический ID", fields.get("Статик", "000-000"))
         
         is_employment = "трудоустройство" in embed.title.lower()
+        is_restore = "восстановление" in embed.title.lower()
+
+        if is_employment:
+            new_nick = f"О | {target_name} | {target_static}"
+            roles_to_add =[guild.get_role(r_id) for r_id in ROLES_EMPLOYMENT if guild.get_role(r_id)]
+            rank_name = DEFAULT_EMPLOYMENT_RANK
+            log_title = "🏷️ Кадровый аудит: Трудоустройство"
+        elif is_restore:
+            new_nick = f"О | {target_name} | {target_static}"
+            roles_to_add =[guild.get_role(r_id) for r_id in ROLES_EMPLOYMENT if guild.get_role(r_id)]
+            rank_name = fields.get("Должность / Звание", "Не указана")
+            log_title = "🏷️ Кадровый аудит: Восстановление"
+        else:
+            target_org = fields.get("Организация", "ORG")
+            new_nick = f"{target_org} | {target_name} | {target_static}"
+            roles_to_add =[guild.get_role(r_id) for r_id in ROLES_STATE_EMP if guild.get_role(r_id)]
+            rank_name = fields.get("Должность / Звание", "Не указана")
+            log_title = "🏷️ Кадровый аудит: Гос. Сотрудник"
 
         if is_employment:
             new_nick = f"О | {target_name} | {target_static}"
@@ -222,15 +240,45 @@ class ResignationModal(discord.ui.Modal, title='Заявление на увол
             await channel.send(content=mentions_str, embed=embed, view=AdminDismissalReviewView())
         await interaction.response.send_message("Заявление на увольнение отправлено старшему составу.", ephemeral=True)
 
+class RestorationModal(discord.ui.Modal, title='Заявка на восстановление'):
+    name_field = discord.ui.TextInput(label='Имя Фамилия', required=True)
+    static_id_field = discord.ui.TextInput(label='Статический ID', placeholder='Например: 123-456', min_length=7, max_length=7, required=True)
+    rank_field = discord.ui.TextInput(label='Должность / Звание', placeholder='Укажите вашу прошлую должность', required=True)
+    doc_field = discord.ui.TextInput(label='Удостоверение', placeholder='Ссылка на скриншот', required=True)
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        if not re.match(r"^\d{3}-\d{3}$", self.static_id_field.value):
+            return await interaction.response.send_message("❌ Ошибка: Статический ID должен быть строго в формате **123-456**!", ephemeral=True)
+
+        channel = interaction.guild.get_channel(REQUESTS_CHANNEL_ID)
+        embed = discord.Embed(title="⏳ Заявка на восстановление на рассмотрении", color=discord.Color.yellow())
+        embed.add_field(name="Соискатель", value=interaction.user.mention, inline=False)
+        embed.add_field(name="Имя Фамилия", value=self.name_field.value, inline=False)
+        embed.add_field(name="Статик", value=self.static_id_field.value, inline=False)
+        embed.add_field(name="Должность / Звание", value=self.rank_field.value, inline=False)
+        embed.add_field(name="Удостоверение", value=self.doc_field.value, inline=False)
+        embed.set_footer(text=f"ID пользователя: {interaction.user.id}")
+        
+        mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_EMPLOYMENT])
+        
+        await channel.send(content=mentions_str, embed=embed, view=AdminReviewView())
+        await interaction.response.send_message("Заявка на восстановление успешно отправлена!", ephemeral=True)
 class RoleRequestView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
+        
     @discord.ui.button(label="Трудоустройство", style=discord.ButtonStyle.green, custom_id="req_emp")
     async def employment_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(EmploymentModal())
+        
     @discord.ui.button(label="Гос. Сотрудник", style=discord.ButtonStyle.blurple, custom_id="req_state_emp")
     async def state_emp_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(StateEmployeeModal())
+
+    @discord.ui.button(label="Восстановление", style=discord.ButtonStyle.gray, emoji="🟨", custom_id="req_restore")
+    async def restore_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RestorationModal())
+        
     @discord.ui.button(label="Увольнение", style=discord.ButtonStyle.red, custom_id="req_resign")
     async def resign_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(ResignationModal())
