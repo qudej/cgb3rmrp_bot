@@ -116,6 +116,77 @@ async def setup_command(ctx):
 
     await ctx.message.delete()
 
+last_menu_messages = {}
+
+@bot.event
+async def on_message(message: discord.Message):
+    # Обязательно обрабатываем команды, чтобы бот на них реагировал
+    await bot.process_commands(message)
+
+    # Игнорируем команды, чтобы не было конфликтов
+    if message.content.startswith(BOT_PREFIX):
+        return
+
+    # Настройки меню для каждого канала
+    target_channels = {
+        HR_SETUP_CHANNEL_ID: {
+            "title": "Кадровый аудит | ЦГБ №3",
+            "desc": "Выберите нужный пункт меню ниже, чтобы подать заявку.",
+            "color": discord.Color.dark_theme(),
+            "view": RoleRequestView
+        },
+        PUNISHMENT_SETUP_CHANNEL_ID: {
+            "title": "🔨 Управление взысканиями",
+            "desc": "Нажмите на кнопку ниже, чтобы выдать дисциплинарное взыскание сотруднику.",
+            "color": discord.Color.dark_red(),
+            "view": PunishmentSetupView
+        },
+        SUPPLY_SETUP_CHANNEL_ID: {
+            "title": "📦 Запрос поставок",
+            "desc": "Нажмите на кнопку ниже, чтобы запросить поставку медикаментов (ЗМХ / МС).",
+            "color": discord.Color.dark_blue(),
+            "view": SupplySetupView
+        },
+        DEPT_SETUP_CHANNEL_ID: {
+            "title": "🏥 Заявки в отделы",
+            "desc": "Выберите отдел, в который хотите подать заявку:",
+            "color": discord.Color.brand_green(),
+            "view": DepartmentSetupView
+        }
+    }
+
+    channel_id = message.channel.id
+    if channel_id in target_channels:
+        data = target_channels[channel_id]
+        
+        # Если бот только что сам отправил это меню — запоминаем его ID и выходим
+        if message.author == bot.user and message.embeds and message.embeds[0].title == data["title"]:
+            last_menu_messages[channel_id] = message.id
+            return
+
+        # Если в канал написали что-то другое, удаляем старое меню
+        old_msg_id = last_menu_messages.get(channel_id)
+        if old_msg_id:
+            try:
+                old_msg = await message.channel.fetch_message(old_msg_id)
+                await old_msg.delete()
+            except:
+                pass
+        else:
+            # Если бот перезапускался и забыл ID, ищем старое меню в последних сообщениях
+            async for msg in message.channel.history(limit=20):
+                if msg.author == bot.user and msg.embeds and msg.embeds[0].title == data["title"]:
+                    try:
+                        await msg.delete()
+                    except:
+                        pass
+
+    embed = discord.Embed(title=data["title"], description=data["desc"], color=data["color"])
+    await message.channel.send(embed=embed, view=data["view"]())
+
+
+
+
 if __name__ == "__main__":
     if not DISCORD_BOT_TOKEN:
         print("❌ КРИТИЧЕСКАЯ ОШИБКА: Токен не найден! Проверьте файл .env")
