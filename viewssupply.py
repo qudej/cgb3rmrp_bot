@@ -120,9 +120,47 @@ class ReportBuilderView(discord.ui.View):
             self.clear_items()
             await interaction.edit_original_response(content="✅ Отчет о поставке успешно сформирован!", view=self)
 
+class SupplyStatusSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Успешно", value="Успешно", emoji="✅", description="Сформировать победный отчет"),
+            discord.SelectOption(label="Частично успешно", value="Частично успешно", emoji="🟨", description="Довезли не всё"),
+            discord.SelectOption(label="Выбили", value="Выбили", emoji="❌", description="Поставка перехвачена"),
+            discord.SelectOption(label="Отказано", value="Отказано", emoji="🚫", description="Отклонить запрос (с причиной)")
+        ]
+        super().__init__(
+            placeholder="Обработать запрос (для СС)...", 
+            min_values=1, 
+            max_values=1, 
+            options=options, 
+            custom_id="sup_status_select"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        # Защита от обычных пользователей
+        if not is_senior_staff(interaction.user):
+            return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
+        
+        status = self.values[0]
+        
+        if status == "Отказано":
+            # Открываем форму ввода причины отказа
+            await interaction.response.send_modal(DenySupplyModal(interaction.message, self.view))
+        else:
+            # Для остальных статусов открываем конструктор отчета
+            types_str = await self.view.get_types_str(interaction.message)
+            await interaction.response.send_message(
+                f"Статус **{status}**. Сформируйте отчет:", 
+                view=ReportBuilderView(status, interaction.message, types_str), 
+                ephemeral=True
+            )
+
+# Обновленный интерфейс сообщения с запросом
 class SupplyRequestControlsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
+        # Добавляем выпадающий список
+        self.add_item(SupplyStatusSelect())
 
     async def get_types_str(self, message):
         desc = message.embeds[0].description
@@ -130,33 +168,6 @@ class SupplyRequestControlsView(discord.ui.View):
             if line.startswith("**Тип:** "):
                 return line.replace("**Тип:** ", "").strip()
         return "Медикаменты"
-
-    @discord.ui.button(label="Успешно", style=discord.ButtonStyle.green, custom_id="sup_success", row=0)
-    async def btn_success(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not is_senior_staff(interaction.user):
-            return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
-        types_str = await self.get_types_str(interaction.message)
-        await interaction.response.send_message("Сформируйте отчет:", view=ReportBuilderView("Успешно", interaction.message, types_str), ephemeral=True)
-
-    @discord.ui.button(label="Частично успешно", style=discord.ButtonStyle.blurple, custom_id="sup_partial", row=0)
-    async def btn_partial(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not is_senior_staff(interaction.user):
-            return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
-        types_str = await self.get_types_str(interaction.message)
-        await interaction.response.send_message("Сформируйте отчет:", view=ReportBuilderView("Частично успешно", interaction.message, types_str), ephemeral=True)
-
-    @discord.ui.button(label="Выбили", style=discord.ButtonStyle.red, custom_id="sup_fail", row=0)
-    async def btn_fail(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not is_senior_staff(interaction.user):
-            return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
-        types_str = await self.get_types_str(interaction.message)
-        await interaction.response.send_message("Сформируйте отчет:", view=ReportBuilderView("Выбили", interaction.message, types_str), ephemeral=True)
-
-    @discord.ui.button(label="Отказано", style=discord.ButtonStyle.gray, custom_id="sup_deny", row=0)
-    async def btn_deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not is_senior_staff(interaction.user): 
-            return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
-        await interaction.response.send_modal(DenySupplyModal(interaction.message, self))
 
     @discord.ui.button(label="Отменить запрос", style=discord.ButtonStyle.gray, custom_id="sup_cancel", row=1)
     async def btn_cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
