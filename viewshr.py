@@ -228,17 +228,24 @@ class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотр�
 
 class ResignationModal(discord.ui.Modal, title='Заявление на увольнение'):
     reason_field = discord.ui.TextInput(label='Причина увольнения', placeholder='ПСЖ / Перевод', required=True)
+    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (imgur/yapx)', required=True)
+
     async def on_submit(self, interaction: discord.Interaction):
         channel = interaction.guild.get_channel(DISMISS_REQUESTS_CHANNEL_ID)
+        
+        if not channel:
+            return await interaction.response.send_message("❌ Ошибка: Канал для заявок на увольнение не настроен.", ephemeral=True)
+            
         embed = discord.Embed(title="⏳ Заявление на увольнение", color=discord.Color.orange())
         embed.add_field(name="Сотрудник", value=interaction.user.mention, inline=False)
         embed.add_field(name="Причина", value=self.reason_field.value, inline=False)
+        embed.add_field(name="Удостоверение", value=self.doc_field.value, inline=False)
         embed.set_footer(text=f"ID пользователя: {interaction.user.id}")
         
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_RESIGNATION])
-        if channel:
-            await channel.send(content=mentions_str, embed=embed, view=AdminDismissalReviewView())
-        await interaction.response.send_message("Заявление на увольнение отправлено старшему составу.", ephemeral=True)
+        
+        await channel.send(content=mentions_str, embed=embed, view=AdminDismissalReviewView())
+        await interaction.response.send_message("Заявление на увольнение успешно отправлено старшему составу.", ephemeral=True)
 
 class RestorationModal(discord.ui.Modal, title='Заявка на восстановление'):
     name_field = discord.ui.TextInput(label='Имя Фамилия', required=True)
@@ -275,7 +282,7 @@ class RoleRequestView(discord.ui.View):
     async def state_emp_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(StateEmployeeModal())
 
-    @discord.ui.button(label="Восстановление", style=discord.ButtonStyle.gray, emoji="🟨", custom_id="req_restore")
+    @discord.ui.button(label="Восстановление", style=discord.ButtonStyle.grey, custom_id="req_restore")
     async def restore_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(RestorationModal())
         
