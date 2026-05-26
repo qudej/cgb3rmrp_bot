@@ -75,6 +75,6 @@ class PunishmentSetupView(discord.ui.View):
     
     @discord.ui.button(label="Выдать взыскание", style=discord.ButtonStyle.red, custom_id="setup_punish_btn")
     async def punish_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not is_senior_staff(interaction.user) or not is_senior_dept_staff(interaction.user):
+        if not is_senior_staff(interaction.user) and not is_senior_dept_staff(interaction.user):
             return await interaction.response.send_message("❌ Доступно только Старшему Составу.", ephemeral=True)
         await interaction.response.send_message("Заполните форму ниже:", view=PunishmentBuilderView(), ephemeral=True)

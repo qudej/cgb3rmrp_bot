@@ -40,7 +40,7 @@ async def context_dismiss_user(interaction: discord.Interaction, member: discord
 
 @bot.tree.context_menu(name="Выдать взыскание")
 async def context_punishment(interaction: discord.Interaction, member: discord.Member):
-    if not is_senior_staff(interaction.user) or not is_senior_dept_staff(interaction.user):
+    if not is_senior_staff(interaction.user) and not is_senior_dept_staff(interaction.user):
         return await interaction.response.send_message("❌ Доступно только Старшему Составу.", ephemeral=True)
     await interaction.response.send_message(f"Выдача взыскания для {member.mention}:", view=PunishmentBuilderView(target_member=member), ephemeral=True)
 
