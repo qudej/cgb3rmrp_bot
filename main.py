@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Импортируем наши модули
 from config import *
-from utils import is_senior_staff, extract_user_data, apply_rank_roles
+from utils import is_senior_staff, extract_user_data, apply_rank_roles, is_senior_dept_staff
 from viewshr import RoleRequestView, AdminReviewView, AdminDismissalReviewView, ContextMenuDismissModal
 from viewsdept import DepartmentSetupView, DepartmentReviewView
 from viewspunish import PunishmentSetupView, PunishmentBuilderView
@@ -40,7 +40,7 @@ async def context_dismiss_user(interaction: discord.Interaction, member: discord
 
 @bot.tree.context_menu(name="Выдать взыскание")
 async def context_punishment(interaction: discord.Interaction, member: discord.Member):
-    if not is_senior_staff(interaction.user):
+    if not is_senior_staff(interaction.user) or not is_senior_dept_staff(interaction.user):
         return await interaction.response.send_message("❌ Доступно только Старшему Составу.", ephemeral=True)
     await interaction.response.send_message(f"Выдача взыскания для {member.mention}:", view=PunishmentBuilderView(target_member=member), ephemeral=True)
 
