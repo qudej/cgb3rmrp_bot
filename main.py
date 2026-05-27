@@ -115,7 +115,10 @@ async def setup_command(ctx):
         embed_dept = discord.Embed(title="🏥 Заявки в отделы", description="Выберите отдел, в который хотите подать заявку:", color=discord.Color.brand_green())
         await dept_channel.send(embed=embed_dept, view=DepartmentSetupView())
 
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except discord.Forbidden:
+        pass
 
 last_menu_messages = {}
 
