@@ -15,24 +15,67 @@ class PunishmentReasonModal(discord.ui.Modal, title="Выдача взыскан
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
-        role = guild.get_role(self.role_id)
         
+        role_to_add_id = self.role_id
+        final_role_name = self.role_name
+        roles_to_remove_ids = set()
+        
+        user_role_ids = [r.id for r in self.target_member.roles]
+
+        if role_to_add_id == PUNISHMENT_W1_ID:
+            if PUNISHMENT_R1_ID in user_role_ids and PUNISHMENT_W2_ID in user_role_ids:
+                role_to_add_id = PUNISHMENT_R2_ID
+                final_role_name = "Выговор 2/2 (Авто-замена)"
+                roles_to_remove_ids.update([PUNISHMENT_R1_ID, PUNISHMENT_W1_ID, PUNISHMENT_W2_ID])
+                
+            elif PUNISHMENT_W2_ID in user_role_ids:
+                role_to_add_id = PUNISHMENT_R1_ID
+                final_role_name = "Выговор 1/2 (Авто-замена 3 предов)"
+                roles_to_remove_ids.update([PUNISHMENT_W1_ID, PUNISHMENT_W2_ID])
+                
+            elif PUNISHMENT_W1_ID in user_role_ids:
+                role_to_add_id = PUNISHMENT_W2_ID
+                final_role_name = "Предупреждение 2/3 (Авто-замена)"
+                roles_to_remove_ids.add(PUNISHMENT_W1_ID)
+
+        elif role_to_add_id == PUNISHMENT_W2_ID:
+            roles_to_remove_ids.add(PUNISHMENT_W1_ID)
+            
+        elif role_to_add_id == PUNISHMENT_R1_ID:
+            roles_to_remove_ids.update([PUNISHMENT_W1_ID, PUNISHMENT_W2_ID])
+            
+        elif role_to_add_id == PUNISHMENT_R2_ID:
+            roles_to_remove_ids.update([PUNISHMENT_R1_ID, PUNISHMENT_W1_ID, PUNISHMENT_W2_ID])
+
+        if roles_to_remove_ids:
+            roles_to_remove = [guild.get_role(r_id) for r_id in roles_to_remove_ids if guild.get_role(r_id)]
+            roles_to_remove = [r for r in roles_to_remove if r in self.target_member.roles]
+            if roles_to_remove:
+                try: await self.target_member.remove_roles(*roles_to_remove)
+                except discord.Forbidden: pass
+
+        role = guild.get_role(role_to_add_id)
         if role:
             try: await self.target_member.add_roles(role)
-            except discord.Forbidden: return await interaction.followup.send("❌ Нет прав на выдачу этой роли.", ephemeral=True)
+            except discord.Forbidden: 
+                return await interaction.followup.send("❌ Нет прав на выдачу этой роли.", ephemeral=True)
 
         log_channel = guild.get_channel(PUNISHMENT_LOG_CHANNEL_ID)
         if log_channel:
+            admin_mention, admin_name, admin_static = extract_user_data(interaction.user)
+            target_mention, target_name, target_static = extract_user_data(self.target_member)
+            
             embed = discord.Embed(title="🔨 Дисциплинарное взыскание", color=discord.Color.dark_orange())
             embed.description = (
-                f"**Кто выдал:** {interaction.user.mention}\n"
-                f"**Кому:** {self.target_member.mention}\n"
-                f"**Взыскание:** {role.mention if role else self.role_name}\n"
+                f"**Кто выдал:** {admin_mention}\n"
+                f"**Кому:** {target_mention}\n"
+                f"**Взыскание:** {role.mention if role else final_role_name}\n"
                 f"**Причина:** {self.reason_field.value}\n\n"
                 f"📅 **Дата:** {datetime.now(msk_tz).strftime('%d.%m.%Y %H:%M')}"
             )
             await log_channel.send(embed=embed)
-        await interaction.followup.send(f"✅ Взыскание успешно выдано {self.target_member.mention}.", ephemeral=True)
+            
+        await interaction.followup.send(f"✅ Взыскание ({final_role_name}) успешно выдано {self.target_member.mention}.", ephemeral=True)
 
 class PunishmentBuilderView(discord.ui.View):
     def __init__(self, target_member: discord.Member = None):
