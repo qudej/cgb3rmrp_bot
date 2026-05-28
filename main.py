@@ -90,6 +90,54 @@ async def promote_user(interaction: discord.Interaction, member: discord.Member)
 async def on_ready():
     print(f"Бот {bot.user} успешно запущен и синхронизирован!")
 
+    target_channels = {
+        HR_SETUP_CHANNEL_ID: {
+            "title": "Кадровый аудит | ЦГБ №3",
+            "desc": "Выберите нужный пункт меню ниже, чтобы подать заявку.",
+            "color": discord.Color.dark_theme(),
+            "view": RoleRequestView
+        },
+        PUNISHMENT_SETUP_CHANNEL_ID: {
+            "title": "🔨 Управление взысканиями",
+            "desc": "Нажмите на кнопку ниже, чтобы выдать дисциплинарное взыскание сотруднику.",
+            "color": discord.Color.dark_red(),
+            "view": PunishmentSetupView
+        },
+        SUPPLY_SETUP_CHANNEL_ID: {
+            "title": "📦 Запрос поставок",
+            "desc": "Нажмите на кнопку ниже, чтобы запросить поставку медикаментов (ЗМХ / МС).",
+            "color": discord.Color.dark_blue(),
+            "view": SupplySetupView
+        },
+        DEPT_SETUP_CHANNEL_ID: {
+            "title": "🏥 Заявки в отделы",
+            "desc": "Выберите отдел, в который хотите подать заявку:",
+            "color": discord.Color.brand_green(),
+            "view": DepartmentSetupView
+        }
+    }
+
+    for channel_id, data in target_channels.items():
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            continue
+            
+        async for msg in channel.history(limit=25):
+            if msg.author == bot.user and msg.embeds and msg.embeds[0].title == data["title"]:
+                try:
+                    await msg.delete()
+                except Exception:
+                    pass
+        
+        embed = discord.Embed(title=data["title"], description=data["desc"], color=data["color"])
+        try:
+            new_msg = await channel.send(embed=embed, view=data["view"]())
+            
+            global sticky_message_ids
+            sticky_message_ids[channel_id] = new_msg.id
+        except Exception:
+            pass
+
 @bot.command(name="setup")
 @commands.has_permissions(administrator=True)
 async def setup_command(ctx):
@@ -120,18 +168,16 @@ async def setup_command(ctx):
     except discord.Forbidden:
         pass
 
-last_menu_messages = {}
-
-is_updating_menu = {}
+sticky_message_ids = {} # Хранит ID текущих липких сообщений (channel_id: message_id)
+sticky_locks = {}       # Хранит блокировки (очередь) для каждого канала
 
 @bot.event
 async def on_message(message: discord.Message):
-
     await bot.process_commands(message)
 
     if message.content.startswith(BOT_PREFIX):
         return
-
+    
     target_channels = {
         HR_SETUP_CHANNEL_ID: {
             "title": "Кадровый аудит | ЦГБ №3",
@@ -168,28 +214,40 @@ async def on_message(message: discord.Message):
     if message.author == bot.user and message.embeds and message.embeds[0].title == data["title"]:
         return
 
-    if is_updating_menu.get(channel_id, False):
-        return
-    
-    is_updating_menu[channel_id] = True
+    if channel_id not in sticky_locks:
+        sticky_locks[channel_id] = asyncio.Lock()
 
-    try:
-        await asyncio.sleep(2.0)
+    async with sticky_locks[channel_id]:
+        try:
+            last_messages = [msg async for msg in message.channel.history(limit=1)]
+            if last_messages:
+                last_msg = last_messages[0]
+                if last_msg.author == bot.user and last_msg.embeds and last_msg.embeds[0].title == data["title"]:
+                    sticky_message_ids[channel_id] = last_msg.id
+                    return
+        except Exception:
+            pass
 
-        async for msg in message.channel.history(limit=50):
-            if msg.author == bot.user and msg.embeds and msg.embeds[0].title == data["title"]:
-                try:
-                    await msg.delete()
-                except discord.NotFound:
-                    pass 
-                except Exception:
-                    pass
+        old_msg_id = sticky_message_ids.get(channel_id)
+        if old_msg_id:
+            try:
+                old_msg = await message.channel.fetch_message(old_msg_id)
+                await old_msg.delete()
+            except discord.NotFound:
+                pass # Сообщение уже было удалено
+            except Exception:
+                pass
+        else:
+            async for msg in message.channel.history(limit=30):
+                if msg.author == bot.user and msg.embeds and msg.embeds[0].title == data["title"]:
+                    try: 
+                        await msg.delete()
+                    except: 
+                        pass
 
         embed = discord.Embed(title=data["title"], description=data["desc"], color=data["color"])
-        await message.channel.send(embed=embed, view=data["view"]())
-        
-    finally:
-        is_updating_menu[channel_id] = False
+        new_msg = await message.channel.send(embed=embed, view=data["view"]())
+        sticky_message_ids[channel_id] = new_msg.id
 
 
 
