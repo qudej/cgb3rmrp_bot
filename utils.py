@@ -10,8 +10,9 @@ def is_senior_staff(member: discord.Member) -> bool:
 
 def is_senior_dept_staff(member: discord.Member) -> bool:
     if member.guild_permissions.administrator: return True
+    ab_senior_role_id = SENIOR_DEPT_ROLES.get("АБ")
     for role in member.roles:
-        if role.id in SENIOR_DEPT_ROLES.get("АБ"): return True
+        if role.id == ab_senior_role_id: return True
     return False
 
 def extract_user_data(member: discord.Member):
