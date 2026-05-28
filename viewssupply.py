@@ -137,19 +137,21 @@ class SupplyStatusSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        # Защита от обычных пользователей
         if not is_senior_staff(interaction.user):
             return await interaction.response.send_message("❌ Управлять поставками может только Старший Состав.", ephemeral=True)
         
         status = self.values[0]
         
         if status == "Отказано":
-            # Открываем форму ввода причины отказа
+            # Модальное окно (форму) откладывать нельзя! Оно должно открываться мгновенно.
             await interaction.response.send_modal(DenySupplyModal(interaction.message, self.view))
         else:
-            # Для остальных статусов открываем конструктор отчета
+            # А вот тут мы МОМЕНТАЛЬНО подтверждаем клик (defer)
+            await interaction.response.defer(ephemeral=True)
+            
             types_str = await self.view.get_types_str(interaction.message)
-            await interaction.response.send_message(
+            # Отправляем окно конструктора отчета через followup
+            await interaction.followup.send(
                 f"Статус **{status}**. Сформируйте отчет:", 
                 view=ReportBuilderView(status, interaction.message, types_str), 
                 ephemeral=True

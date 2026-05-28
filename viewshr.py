@@ -189,8 +189,11 @@ class EmploymentModal(discord.ui.Modal, title='Заявка на трудоус�
     static_id_field = discord.ui.TextInput(label='Статический ID', placeholder='Например: 123-456', min_length=7, max_length=7, required=True)
     
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        
         if not re.match(r"^\d{3}-\d{3}$", self.static_id_field.value):
-            return await interaction.response.send_message("❌ Ошибка: Статический ID должен быть строго в формате **123-456**!", ephemeral=True)
+            return await interaction.followup.send("❌ Ошибка: Статический ID должен быть строго в формате **123-456**!", ephemeral=True)
+
         channel = interaction.guild.get_channel(REQUESTS_CHANNEL_ID)
         embed = discord.Embed(title="⏳ Новая заявка на трудоустройство на рассмотрении", color=discord.Color.yellow())
         embed.add_field(name="Соискатель", value=interaction.user.mention, inline=False)
@@ -200,7 +203,8 @@ class EmploymentModal(discord.ui.Modal, title='Заявка на трудоус�
         
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_EMPLOYMENT])
         await channel.send(content=mentions_str, embed=embed, view=AdminReviewView())
-        await interaction.response.send_message("Заявка отправлена!", ephemeral=True)
+        
+        await interaction.followup.send("Заявка отправлена!", ephemeral=True)
 
 class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотрудника'):
     name_field = discord.ui.TextInput(label='Имя Фамилия', required=True)
@@ -210,8 +214,11 @@ class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотр�
     doc_field = discord.ui.TextInput(label='Удостоверение', required=True)
     
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        
         if not re.match(r"^\d{3}-\d{3}$", self.static_id_field.value):
-            return await interaction.response.send_message("❌ Ошибка: Статический ID должен быть строго в формате **123-456**!", ephemeral=True)
+            return await interaction.followup.send("❌ Ошибка: Статический ID должен быть строго в формате **123-456**!", ephemeral=True)
+
         channel = interaction.guild.get_channel(REQUESTS_CHANNEL_ID)
         embed = discord.Embed(title="⏳ Заявка гос. сотрудника на рассмотрении", color=discord.Color.yellow())
         embed.add_field(name="Гос. Сотрудник", value=interaction.user.mention, inline=False)
@@ -224,17 +231,18 @@ class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотр�
         
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_STATE_EMP])
         await channel.send(content=mentions_str, embed=embed, view=AdminReviewView())
-        await interaction.response.send_message("Заявка отправлена!", ephemeral=True)
+        await interaction.followup.send("Заявка отправлена!", ephemeral=True)
 
 class ResignationModal(discord.ui.Modal, title='Заявление на увольнение'):
     reason_field = discord.ui.TextInput(label='Причина увольнения', placeholder='ПСЖ / Перевод', required=True)
     doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (imgur/yapx)', required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
-        channel = interaction.guild.get_channel(DISMISS_REQUESTS_CHANNEL_ID)
+        await interaction.response.defer(ephemeral=True)
         
+        channel = interaction.guild.get_channel(DISMISS_REQUESTS_CHANNEL_ID)
         if not channel:
-            return await interaction.response.send_message("❌ Ошибка: Канал для заявок на увольнение не настроен.", ephemeral=True)
+            return await interaction.followup.send("❌ Ошибка: Канал для заявок на увольнение не настроен.", ephemeral=True)
             
         embed = discord.Embed(title="⏳ Заявление на увольнение", color=discord.Color.orange())
         embed.add_field(name="Сотрудник", value=interaction.user.mention, inline=False)
@@ -243,9 +251,8 @@ class ResignationModal(discord.ui.Modal, title='Заявление на увол
         embed.set_footer(text=f"ID пользователя: {interaction.user.id}")
         
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_RESIGNATION])
-        
         await channel.send(content=mentions_str, embed=embed, view=AdminDismissalReviewView())
-        await interaction.response.send_message("Заявление на увольнение успешно отправлено старшему составу.", ephemeral=True)
+        await interaction.followup.send("Заявление на увольнение отправлено старшему составу.", ephemeral=True)
 
 class RestorationModal(discord.ui.Modal, title='Заявка на восстановление'):
     name_field = discord.ui.TextInput(label='Имя Фамилия', required=True)
