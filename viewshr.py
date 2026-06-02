@@ -235,7 +235,7 @@ class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотр�
 
 class ResignationModal(discord.ui.Modal, title='Заявление на увольнение'):
     reason_field = discord.ui.TextInput(label='Причина увольнения', placeholder='ПСЖ / Перевод', required=True)
-    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (imgur/yapx)', required=True)
+    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (https://cgb3.pics/)', required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)

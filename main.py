@@ -12,6 +12,8 @@ from viewsdept import DepartmentSetupView, DepartmentReviewView
 from viewspunish import PunishmentSetupView, PunishmentBuilderView
 from viewssupply import SupplySetupView, SupplyRequestControlsView
 from viewsranks import SetRankView
+from viewsedu import InstructionSetupView, InstructionReviewView
+from viewsreports import ReportSetupView, ReportReviewView, PromotionQueueView
 
 class MyBot(commands.Bot):
     async def setup_hook(self):
@@ -24,6 +26,11 @@ class MyBot(commands.Bot):
         self.add_view(SupplyRequestControlsView())
         self.add_view(DepartmentSetupView())
         self.add_view(DepartmentReviewView())
+        self.add_view(InstructionSetupView())
+        self.add_view(InstructionReviewView())
+        self.add_view(ReportSetupView())
+        self.add_view(ReportReviewView())
+        self.add_view(PromotionQueueView())
         await self.tree.sync()
 
 intents = discord.Intents.default()
@@ -114,6 +121,12 @@ async def on_ready():
             "desc": "Выберите отдел, в который хотите подать заявку:",
             "color": discord.Color.brand_green(),
             "view": DepartmentSetupView
+        },
+        INSTRUCTION_SETUP_CHANNEL_ID: {
+            "title": "📚 Учебный центр",
+            "desc": "Нажмите на кнопку ниже, чтобы запросить проведение инструктажа или экзамена.",
+            "color": discord.Color.gold(),
+            "view": InstructionSetupView
         }
     }
 
@@ -163,6 +176,15 @@ async def setup_command(ctx):
         embed_dept = discord.Embed(title="🏥 Заявки в отделы", description="Выберите отдел, в который хотите подать заявку:", color=discord.Color.brand_green())
         await dept_channel.send(embed=embed_dept, view=DepartmentSetupView())
 
+    # 5. Эмбед для отчетов на повышение
+    report_channel = bot.get_channel(REPORT_SETUP_CHANNEL_ID)
+    if report_channel:
+        embed_rep = discord.Embed(
+            title="📋 Отчеты на повышение",
+            description="Выберите ваш отдел ниже, чтобы оставить отчет о проделанной работе.",
+            color=discord.Color.purple()
+        )
+        await report_channel.send(embed=embed_rep, view=ReportSetupView())
     try:
         await ctx.message.delete()
     except discord.Forbidden:
@@ -202,6 +224,12 @@ async def on_message(message: discord.Message):
             "desc": "Выберите отдел, в который хотите подать заявку:",
             "color": discord.Color.brand_green(),
             "view": DepartmentSetupView
+        },
+        INSTRUCTION_SETUP_CHANNEL_ID: {
+            "title": "📚 Учебный центр",
+            "desc": "Нажмите на кнопку ниже, чтобы запросить проведение инструктажа или экзамена.",
+            "color": discord.Color.gold(),
+            "view": InstructionSetupView
         }
     }
 

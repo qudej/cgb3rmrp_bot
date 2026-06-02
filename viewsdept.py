@@ -145,7 +145,7 @@ class DepartmentReviewView(discord.ui.View):
 
 class DepartmentModal(discord.ui.Modal):
     rank_field = discord.ui.TextInput(label='Текущая должность', required=True)
-    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (imgur/yapx)', required=True)
+    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (https://cgb3.pics/)', required=True)
 
     def __init__(self, dept_name: str):
         super().__init__(title=f'Заявка в {dept_name}')
