@@ -8,9 +8,17 @@ class InstructionReviewView(discord.ui.View):
         super().__init__(timeout=None)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if not is_senior_staff(interaction.user):
-            await interaction.response.send_message("❌ Это действие доступно только Старшему Составу.", ephemeral=True)
+        # Получаем ID базовой роли отдела КУЦ из настроек
+        kuc_role_id = DEPARTMENTS_ROLES.get("КУЦ")
+        
+        # Проверяем, есть ли у пользователя эта роль
+        is_kuc_member = any(r.id == kuc_role_id for r in interaction.user.roles) if kuc_role_id else False
+
+        # Разрешаем нажатие, если это Старший Состав ИЛИ сотрудник КУЦ
+        if not is_senior_staff(interaction.user) and not is_kuc_member:
+            await interaction.response.send_message("❌ Это действие доступно только сотрудникам КУЦ и Старшему Составу.", ephemeral=True)
             return False
+            
         return True
 
     @discord.ui.button(label="Проведено", style=discord.ButtonStyle.green, custom_id="edu_confirm_btn")
