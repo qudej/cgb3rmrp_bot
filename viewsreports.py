@@ -202,8 +202,13 @@ class ReportModal(discord.ui.Modal):
         embed.set_footer(text=f"ID: {interaction.user.id} | Отдел: {self.dept_name} | Ранг: {self.rank_idx}")
 
         # Тегаем руководство отдела
-        ping_dept = "КУЦ" if self.dept_name == "О" else self.dept_name
-        role_ids = DEPT_PING_ROLES.get(ping_dept, [])
+        if self.dept_name == "О":
+            # Для Ординатуры тегаем только одну общую роль КУЦ
+            role_ids = [KUC_GENERAL_PING_ROLE_ID]
+        else:
+            # Для остальных отделов берем из словаря Зав/Зам
+            role_ids = DEPT_PING_ROLES.get(self.dept_name, [])
+            
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in role_ids])
 
         await channel.send(content=mentions_str, embed=embed, view=ReportReviewView())

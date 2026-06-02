@@ -101,13 +101,16 @@ class InstructionBuilderView(discord.ui.View):
         embed = discord.Embed(title="⏳ Запрос инструктажа", description=desc, color=discord.Color.yellow())
         embed.set_footer(text=f"ID пользователя: {interaction.user.id}")
 
-        # 4. Собираем пинги (Зав + Зам + Старший сотрудник этого отдела)
-        ping_dept = "КУЦ" if current_dept == "О" else current_dept
-        
-        role_ids = DEPT_PING_ROLES.get(ping_dept, []).copy()
-        senior_role = SENIOR_DEPT_ROLES.get(ping_dept)
-        if senior_role:
-            role_ids.append(senior_role)
+        # 4. Собираем пинги
+        if current_dept == "О":
+            # Если это Ординатура, тегаем ТОЛЬКО общую роль КУЦ
+            role_ids = [KUC_GENERAL_PING_ROLE_ID]
+        else:
+            # Для остальных - тегаем Зав, Зам и Старшего сотрудника их отдела
+            role_ids = DEPT_PING_ROLES.get(current_dept, []).copy()
+            senior_role = SENIOR_DEPT_ROLES.get(current_dept)
+            if senior_role:
+                role_ids.append(senior_role)
 
         mentions_str = " ".join([f"<@&{r_id}>" for r_id in set(role_ids)])
 
