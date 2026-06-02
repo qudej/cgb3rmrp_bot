@@ -14,6 +14,7 @@ from viewssupply import SupplySetupView, SupplyRequestControlsView
 from viewsranks import SetRankView
 from viewsedu import InstructionSetupView, InstructionReviewView
 from viewsreports import ReportSetupView, ReportReviewView, PromotionQueueView
+from viewsinterviews import InterviewSetupView
 
 class MyBot(commands.Bot):
     async def setup_hook(self):
@@ -31,6 +32,7 @@ class MyBot(commands.Bot):
         self.add_view(ReportSetupView())
         self.add_view(ReportReviewView())
         self.add_view(PromotionQueueView())
+        self.add_view(InterviewSetupView())
         await self.tree.sync()
 
 intents = discord.Intents.default()
@@ -127,6 +129,12 @@ async def on_ready():
             "desc": "Нажмите на кнопку ниже, чтобы запросить проведение инструктажа или экзамена.",
             "color": discord.Color.gold(),
             "view": InstructionSetupView
+        },
+        INTERVIEW_SETUP_CHANNEL_ID: {
+            "title": "📝 Отчеты о собеседованиях",
+            "desc": "Нажмите на кнопку ниже, чтобы оставить отчет о проведенном собеседовании.",
+            "color": discord.Color.teal(),
+            "view": InterviewSetupView
         }
     }
 
@@ -185,10 +193,22 @@ async def setup_command(ctx):
             color=discord.Color.purple()
         )
         await report_channel.send(embed=embed_rep, view=ReportSetupView())
+
+    # 6. Эмбед для отчетов о собеседованиях
+    interview_channel = bot.get_channel(INTERVIEW_SETUP_CHANNEL_ID)
+    if interview_channel:
+        embed_int = discord.Embed(
+            title="📝 Отчеты о собеседованиях",
+            description="Нажмите на кнопку ниже, чтобы оставить отчет о проведенном собеседовании.",
+            color=discord.Color.teal()
+        )
+        await interview_channel.send(embed=embed_int, view=InterviewSetupView())
+
     try:
         await ctx.message.delete()
     except discord.Forbidden:
         pass
+    
 
 sticky_message_ids = {} # Хранит ID текущих липких сообщений (channel_id: message_id)
 sticky_locks = {}       # Хранит блокировки (очередь) для каждого канала
@@ -230,6 +250,12 @@ async def on_message(message: discord.Message):
             "desc": "Нажмите на кнопку ниже, чтобы запросить проведение инструктажа или экзамена.",
             "color": discord.Color.gold(),
             "view": InstructionSetupView
+        },
+        INTERVIEW_SETUP_CHANNEL_ID: {
+            "title": "📝 Отчеты о собеседованиях",
+            "desc": "Нажмите на кнопку ниже, чтобы оставить отчет о проведенном собеседовании.",
+            "color": discord.Color.teal(),
+            "view": InterviewSetupView
         }
     }
 
