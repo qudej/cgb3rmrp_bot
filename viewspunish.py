@@ -73,7 +73,7 @@ class PunishmentReasonModal(discord.ui.Modal, title="Выдача взыскан
                 f"**Причина:** {self.reason_field.value}\n\n"
                 f"📅 **Дата:** {datetime.now(msk_tz).strftime('%d.%m.%Y %H:%M')}"
             )
-            await log_channel.send(embed=embed)
+            await log_channel.send(content=self.target_member.mention, embed=embed)
             
         await interaction.followup.send(f"✅ Взыскание ({final_role_name}) успешно выдано {self.target_member.mention}.", ephemeral=True)
 
