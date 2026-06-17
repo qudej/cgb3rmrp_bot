@@ -129,7 +129,7 @@ class SupplyStatusSelect(discord.ui.Select):
             discord.SelectOption(label="Отказано", value="Отказано", emoji="🚫", description="Отклонить запрос (с причиной)")
         ]
         super().__init__(
-            placeholder="Обработать запрос (для СС)...", 
+            placeholder="Обработать запрос (для сотрудников ЦГБ №3)...", 
             min_values=1, 
             max_values=1, 
             options=options, 
