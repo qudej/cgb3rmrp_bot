@@ -83,8 +83,18 @@ class ReportReviewView(discord.ui.View):
     def has_dept_perm(self, member: discord.Member, dept_name: str) -> bool:
         if member.guild_permissions.administrator: return True
         
-        check_dept = "КУЦ" if dept_name == "О" else dept_name
-        allowed_roles = DEPT_PING_ROLES.get(check_dept, [])
+        if dept_name == "О":
+            kuc_base_role = DEPARTMENTS_ROLES.get("КУЦ")
+            kuc_ping_roles = DEPT_PING_ROLES.get("КУЦ", [])
+            
+            if kuc_base_role and any(r.id == kuc_base_role for r in member.roles):
+                return True
+            if any(r.id in kuc_ping_roles for r in member.roles):
+                return True
+            return False
+            
+        # === ДЛЯ ОСТАЛЬНЫХ ОТДЕЛОВ ===
+        allowed_roles = DEPT_PING_ROLES.get(dept_name, [])
         return any(r.id in allowed_roles for r in member.roles)
 
     @discord.ui.button(label="Принять", style=discord.ButtonStyle.green, custom_id="rep_accept_btn")
