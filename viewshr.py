@@ -235,7 +235,7 @@ class StateEmployeeModal(discord.ui.Modal, title='Заявка гос. сотр�
 
 class ResignationModal(discord.ui.Modal, title='Заявление на увольнение'):
     reason_field = discord.ui.TextInput(label='Причина увольнения', placeholder='ПСЖ / Перевод', required=True)
-    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (https://cgb3.pics/)', required=True)
+    doc_field = discord.ui.TextInput(label='Удостоверение (ссылка)', placeholder='Ссылка на скриншот (imgur/yapx)', required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -250,9 +250,22 @@ class ResignationModal(discord.ui.Modal, title='Заявление на увол
         embed.add_field(name="Удостоверение", value=self.doc_field.value, inline=False)
         embed.set_footer(text=f"ID пользователя: {interaction.user.id}")
         
-        mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_RESIGNATION])
+        is_head_or_deputy = False
+        
+        for role_ids in DEPT_PING_ROLES.values():
+            if any(r.id in role_ids for r in interaction.user.roles):
+                is_head_or_deputy = True
+                break
+        
+        if is_head_or_deputy:
+            # Если это Заведующий или Зам -> Пингуем Руководящий состав
+            mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_RESIGNATION_LEADERSHIP])
+        else:
+            # Если это любой другой сотрудник -> Пингуем обычный Старший состав
+            mentions_str = " ".join([f"<@&{r_id}>" for r_id in PING_RESIGNATION])
+        
         await channel.send(content=mentions_str, embed=embed, view=AdminDismissalReviewView())
-        await interaction.followup.send("Заявление на увольнение отправлено старшему составу.", ephemeral=True)
+        await interaction.followup.send("Заявление на увольнение отправлено на рассмотрение.", ephemeral=True)
 
 class RestorationModal(discord.ui.Modal, title='Заявка на восстановление'):
     name_field = discord.ui.TextInput(label='Имя Фамилия', required=True)
